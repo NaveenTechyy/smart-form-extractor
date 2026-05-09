@@ -1,19 +1,24 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useForm } from "../context/useForm";
-import { loadPDF, getPDFAsBase64 } from "../services/pdfService";
-import { extractFieldsFromPDF } from "../services/claudeService";
+import { useForm } from "../../context/useForm";
+import {
+  loadPDF,
+  getPDFAsBase64,
+  getPDFAsDataURL,
+} from "../../services/pdfService";
+import { extractFieldsFromPDF } from "../../services/extractionService";
 
 export const PDFUpload = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const {
     setFields,
-    setFormValues,
     setIsExtracting,
     setPdf,
     setPdfPages,
     setFocusedFieldId,
+    setPdfFile,
+    setPdfFileName,
   } = useForm();
 
   const handleDragEnter = (e) => {
@@ -36,31 +41,31 @@ export const PDFUpload = () => {
   const processPDF = async (file) => {
     try {
       setIsExtracting(true);
-      setStatusMessage("📄 Loading PDF...");
+      setStatusMessage(" Loading PDF...");
       const pdf = await loadPDF(file);
       setPdf(pdf);
       setPdfPages(pdf.numPages);
+      setPdfFileName(file.name);
 
-      setStatusMessage("🧠 Processing form fields...");
-      const base64 = await getPDFAsBase64(file);
+      const [base64, dataUrl] = await Promise.all([
+        getPDFAsBase64(file),
+        getPDFAsDataURL(file),
+      ]);
+      setPdfFile(dataUrl);
+
+      setStatusMessage(" Processing form fields...");
       const extractedFields = await extractFieldsFromPDF(base64);
 
       setFields(extractedFields);
-      const initialValues = {};
-      extractedFields.forEach((field) => {
-        initialValues[field.id] = field.value || "";
-      });
-      setFormValues(initialValues);
 
       if (extractedFields.length > 0) {
         setFocusedFieldId(extractedFields[0].id);
       }
 
-      setStatusMessage("✅ PDF loaded successfully!");
+      setStatusMessage(" PDF loaded successfully!");
       setTimeout(() => setStatusMessage(""), 2000);
-    } catch (error) {
-      console.error("Error processing PDF:", error);
-      setStatusMessage("❌ Error loading PDF. Please try again.");
+    } catch {
+      setStatusMessage(" Error loading PDF. Please try again.");
       setTimeout(() => setStatusMessage(""), 3000);
     } finally {
       setIsExtracting(false);
@@ -76,7 +81,7 @@ export const PDFUpload = () => {
     if (files.length > 0 && files[0].type === "application/pdf") {
       processPDF(files[0]);
     } else {
-      setStatusMessage("⚠️ Please drop a PDF file");
+      setStatusMessage(" Please drop a PDF file");
       setTimeout(() => setStatusMessage(""), 2000);
     }
   };
@@ -109,6 +114,7 @@ export const PDFUpload = () => {
           className="hidden"
           id="pdf-input"
         />
+
         <label htmlFor="pdf-input" className="cursor-pointer block">
           <motion.div
             animate={isDragging ? { scale: 1.1 } : { scale: 1 }}
@@ -131,6 +137,7 @@ export const PDFUpload = () => {
           <p className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
             {isDragging ? "Drop PDF here" : "Drag & drop your PDF"}
           </p>
+
           <p className="text-slate-600 dark:text-slate-300 text-lg">
             or click to select a file
           </p>
@@ -143,7 +150,7 @@ export const PDFUpload = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           className={`p-4 rounded-xl text-sm font-bold flex items-center gap-2 ${
-            statusMessage.includes("Error") || statusMessage.includes("⚠️")
+            statusMessage.includes("Error") || statusMessage.includes(" ")
               ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700"
               : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700"
           }`}
@@ -151,21 +158,6 @@ export const PDFUpload = () => {
           {statusMessage}
         </motion.div>
       )}
-
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-2 border-amber-200 dark:border-amber-800 rounded-2xl p-5"
-      >
-        <p className="font-bold text-amber-900 dark:text-amber-100 mb-2 flex items-center gap-2">
-          💡 Using Demo Form Fields
-        </p>
-        <p className="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
-          The app is currently using <span className="font-semibold">10 demo bank form fields</span> for testing. For real AI-powered extraction, set up a backend proxy to overcome CORS restrictions. See README for implementation details.
-        </p>
-      </motion.div>
     </div>
   );
 };
-

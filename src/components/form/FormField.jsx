@@ -1,7 +1,18 @@
 import { motion } from "framer-motion";
-import { useForm } from "../context/useForm";
+import { useForm } from "../../context/useForm";
 
-export const FormField = ({ field }) => {
+const TYPE_BADGE_COLORS = {
+  text: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
+  email:
+    "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300",
+  number:
+    "bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-300",
+  date: "bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-300",
+  select: "bg-cyan-100 text-cyan-600 dark:bg-cyan-900/40 dark:text-cyan-300",
+  checkbox: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300",
+};
+
+export const FormField = ({ field, showErrors }) => {
   const {
     formValues,
     setFormValues,
@@ -11,7 +22,7 @@ export const FormField = ({ field }) => {
   } = useForm();
 
   const value = formValues[field.id] ?? "";
-  const error = errors[field.id];
+  const error = showErrors ? errors[field.id] : null;
   const isFocused = focusedFieldId === field.id;
 
   const handleChange = (newValue) => {
@@ -95,6 +106,7 @@ export const FormField = ({ field }) => {
                   : "border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             } text-gray-900 dark:text-white focus:outline-none font-medium cursor-pointer`}
           >
+            
             <option value="">Select {field.label.toLowerCase()}</option>
             {field.options?.map((opt) => (
               <option key={opt} value={opt}>
@@ -107,7 +119,9 @@ export const FormField = ({ field }) => {
       case "checkbox":
         return (
           <label className="flex items-center gap-3 cursor-pointer group">
+            
             <div className="relative">
+              
               <input
                 type="checkbox"
                 checked={value === true || value === "true"}
@@ -140,7 +154,7 @@ export const FormField = ({ field }) => {
               </div>
             </div>
             <span className="text-gray-900 dark:text-white font-semibold group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-              {field.label}
+              {field.label}     
             </span>
           </label>
         );
@@ -151,37 +165,50 @@ export const FormField = ({ field }) => {
   };
 
   return (
-    <motion.div
-      animate={isFocused ? { scale: 1.02 } : { scale: 1 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className={`p-5 rounded-xl border-2 transition-all ${
+    <div
+      className={`p-4 rounded-xl border transition-all ${
         error
-          ? "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/10 shadow-lg shadow-red-500/10"
+          ? "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/10"
           : isFocused
-            ? "border-blue-400 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 shadow-lg shadow-blue-500/20"
-            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-md"
+            ? "border-slate-200 dark:border-slate-700 bg-blue-50/60 dark:bg-blue-900/10"
+            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600"
       }`}
+      style={{
+        transition: "all 0.2s ease",
+        borderLeftColor: error ? "#f87171" : isFocused ? "#6c8ef7" : undefined,
+        borderLeftWidth: isFocused || error ? "3px" : undefined,
+      }}
     >
-      <label className="flex items-center gap-2 mb-3">
-        <span className="font-bold text-gray-900 dark:text-white">
-          {field.label}
+      
+      <div className="flex items-start justify-between gap-2 mb-3">
+        
+        <label className="flex items-center gap-2">
+          
+          <span className="font-bold text-gray-900 dark:text-white">
+            {field.label}    
+          </span>
+          {field.required && (
+            <span className="text-red-500 font-bold text-lg">*</span>
+          )}
+        </label>
+        <span
+          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide shrink-0 ${
+            TYPE_BADGE_COLORS[field.type] ?? TYPE_BADGE_COLORS.text
+          }`}
+        >
+          {field.type}   
         </span>
-        {field.required && (
-          <span className="text-red-500 font-bold text-lg">*</span>
-        )}
-      </label>
-
-      {renderInput()}
-
+      </div>
+      {renderInput()}  
       {error && (
         <motion.p
           initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-red-500 dark:text-red-400 text-sm mt-2 font-semibold flex items-center gap-1"
         >
-          ⚠️ {error}
+          {error}   
         </motion.p>
       )}
-    </motion.div>
+    </div>
   );
 };
