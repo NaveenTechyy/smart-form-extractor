@@ -22,19 +22,27 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: false,
     minify: "terser",
+
     terserOptions: {
       compress: {
         drop_console: true,
       },
     },
+
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ["react", "react-dom", "framer-motion"],
-          pdf: ["pdfjs-dist"],
+        manualChunks(id) {
+          if (id.includes("pdfjs-dist")) {
+            return "pdf";
+          }
+
+          if (id.includes("node_modules")) {
+            return "vendor";
+          }
         },
       },
     },
+
     chunkSizeWarningLimit: 1000,
     cssCodeSplit: true,
   },
