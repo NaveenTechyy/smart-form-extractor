@@ -1,7 +1,7 @@
 import { DEMO_FIELDS } from "../utils/demoData";
 
-export const extractFieldsFromPDF = async (base64Pdf) => {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+export const extractFieldsFromPDF = async base64Pdf => {
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
   try {
     const response = await fetch(`${apiUrl}/api/extract`, {
@@ -19,7 +19,7 @@ export const extractFieldsFromPDF = async (base64Pdf) => {
     if (data.fields && data.fields.length > 0) return data.fields;
     return DEMO_FIELDS;
   } catch (error) {
-    console.error('Extraction failed:', error);
+    console.error("Extraction failed:", error);
     return DEMO_FIELDS;
   }
 };
