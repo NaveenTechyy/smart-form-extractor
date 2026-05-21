@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "dev:netlify": "netlify dev",
+    "start": "node server.js",
     "server": "node server.js",
     "build": "vite build",
     "lint": "eslint .",
@@ -16,6 +17,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "cors": "2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "framer-motion": "^12.38.0",

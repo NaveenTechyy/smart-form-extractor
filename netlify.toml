@@ -11,9 +11,8 @@
   to = "/index.html"
   status = 200
 
-[context.production.environment]
   VITE_OLLAMA_API_URL = "https://your-ollama-server.railway.app"
-  VITE_API_URL = "https://your-api-server.railway.app"
+  VITE_API_URL = "https://your-render-service.onrender.com"
 
 [context.deploy-preview.environment]
   VITE_OLLAMA_API_URL = "https://staging-ollama-server.railway.app"
