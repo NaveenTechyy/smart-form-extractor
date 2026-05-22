@@ -8,10 +8,21 @@ import { DEMO_FIELDS } from "./src/utils/demoData.js";
 
 dotenv.config();
 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : null; // null = allow all origins (open) when env var is not set
+
 const app = express();
 app.use(
   cors({
-    origin: true,
+    origin: (origin, cb) => {
+      // No restriction when ALLOWED_ORIGINS is not configured
+      if (!allowedOrigins) return cb(null, true);
+      // Allow server-to-server / curl calls (no Origin header)
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error(`CORS: origin '${origin}' not allowed`));
+    },
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type"],
   }),
