@@ -42,6 +42,30 @@ Rules:
 4. If no fields found, return empty array []
 5. Extract ALL visible form fields`;
 
+const VISION_PROMPT = `You are a PDF form field extraction expert analyzing a scanned or image-based PDF form.
+Look carefully at all form fields visible in these page images and extract every field.
+
+IMPORTANT: Return ONLY a valid JSON array. Start with [ and end with ]. No markdown, no explanation, no extra text.
+
+For each field, create an object with EXACTLY these keys:
+{
+  "id": "snake_case_unique_id",
+  "label": "Human readable label",
+  "type": "text|number|date|select|checkbox",
+  "value": "filled value or empty string if blank",
+  "required": true or false,
+  "options": [],
+  "page": 1,
+  "bbox": {"top": 0.0, "left": 0.0, "width": 0.1, "height": 0.03}
+}
+
+Rules:
+1. Return valid JSON array ONLY - nothing else
+2. bbox values must be between 0 and 1 (relative position on the page)
+3. type must be one of: text, number, date, select, checkbox
+4. If no fields found, return empty array []
+5. Extract ALL visible form fields including labels, input boxes, checkboxes, dropdowns and date fields`;
+
 const clamp = v => Math.min(1, Math.max(0, Number(v) || 0));
 
 app.get("/", (_req, res) => {
@@ -50,7 +74,7 @@ app.get("/", (_req, res) => {
 
 app.post("/api/extract", async (req, res) => {
   try {
-    const { base64Pdf } = req.body;
+    const { base64Pdf, pageImages } = req.body;
 
     if (!base64Pdf) {
       return res
@@ -68,10 +92,16 @@ app.post("/api/extract", async (req, res) => {
     console.log("PDF extracted, text length:", extractedText.length);
     console.log("First 100 chars:", extractedText.substring(0, 100));
 
-    // If text extraction failed (likely image-based PDF), return demo data
+    // If text extraction failed (likely image-based PDF), use vision model
     if (extractedText.length < 50) {
+      if (Array.isArray(pageImages) && pageImages.length > 0) {
+        console.log(
+          `PDF is image-based. Using vision model on ${pageImages.length} page(s).`,
+        );
+        return await extractWithVision(pageImages, res);
+      }
       console.warn(
-        "PDF appears to be image-based or has no text content. Returning demo data.",
+        "PDF appears to be image-based but no page images provided. Returning demo data.",
       );
       return res.json({ success: true, fields: DEMO_FIELDS });
     }
@@ -133,3 +163,62 @@ app.post("/api/extract", async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT);
+
+async function extractWithVision(pageImages, res) {
+  try {
+    const imageContent = pageImages.map(b64 => ({
+      type: "image_url",
+      image_url: { url: `data:image/jpeg;base64,${b64}` },
+    }));
+
+    const result = await groq.chat.completions.create({
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      messages: [
+        {
+          role: "user",
+          content: [{ type: "text", text: VISION_PROMPT }, ...imageContent],
+        },
+      ],
+      temperature: 0.3,
+      max_tokens: 4096,
+    });
+
+    let text = result.choices[0].message.content
+      .replace(/```json|```/g, "")
+      .trim();
+
+    console.log("Groq vision response:", text.substring(0, 200));
+
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.warn("Vision JSON match failed, returning demo data");
+      return res.json({ success: true, fields: DEMO_FIELDS });
+    }
+
+    const parsedFields = JSON.parse(jsonMatch[0]);
+    const fields = parsedFields.map((f, index) => ({
+      id: f.id || `field_${index + 1}`,
+      label: f.label || "",
+      type: ["text", "number", "date", "select", "checkbox"].includes(f.type)
+        ? f.type
+        : "text",
+      value: f.value != null ? f.value : "",
+      required: Boolean(f.required),
+      options: Array.isArray(f.options)
+        ? f.options.filter(o => typeof o === "string")
+        : [],
+      page: Number(f.page) || 1,
+      bbox: {
+        top: clamp(f?.bbox?.top),
+        left: clamp(f?.bbox?.left),
+        width: clamp(f?.bbox?.width || 0.2),
+        height: clamp(f?.bbox?.height || 0.03),
+      },
+    }));
+
+    return res.json({ success: true, fields });
+  } catch (err) {
+    console.error("Vision extraction error:", err);
+    return res.json({ success: true, fields: DEMO_FIELDS });
+  }
+}

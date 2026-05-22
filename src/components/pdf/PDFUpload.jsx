@@ -5,6 +5,7 @@ import {
   loadPDF,
   getPDFAsBase64,
   getPDFAsDataURL,
+  renderPDFPagesToImages,
 } from "../../services/pdfService";
 import { extractFieldsFromPDF } from "../../services/extractionService";
 
@@ -21,24 +22,24 @@ export const PDFUpload = () => {
     setPdfFileName,
   } = useForm();
 
-  const handleDragEnter = (e) => {
+  const handleDragEnter = e => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = e => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = e => {
     e.preventDefault();
     e.stopPropagation();
   };
 
-  const processPDF = async (file) => {
+  const processPDF = async file => {
     try {
       setIsExtracting(true);
       setStatusMessage(" Loading PDF...");
@@ -54,7 +55,8 @@ export const PDFUpload = () => {
       setPdfFile(dataUrl);
 
       setStatusMessage(" Processing form fields...");
-      const extractedFields = await extractFieldsFromPDF(base64);
+      const pageImages = await renderPDFPagesToImages(pdf);
+      const extractedFields = await extractFieldsFromPDF(base64, pageImages);
 
       setFields(extractedFields);
 
@@ -72,7 +74,7 @@ export const PDFUpload = () => {
     }
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = e => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -86,7 +88,7 @@ export const PDFUpload = () => {
     }
   };
 
-  const handleFileInput = (e) => {
+  const handleFileInput = e => {
     const file = e.target.files?.[0];
     if (file && file.type === "application/pdf") {
       processPDF(file);
