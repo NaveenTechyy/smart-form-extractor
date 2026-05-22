@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: smart-form-extractor-api
+    runtime: node
+    buildCommand: pnpm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GROQ_API_KEY
+        sync: false # Set this manually in Render dashboard → Environment
+      - key: ALLOWED_ORIGINS
+        sync: false # Set to your Netlify URL e.g. https://your-app.netlify.app
